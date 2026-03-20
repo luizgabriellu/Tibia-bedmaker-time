@@ -1,45 +1,26 @@
-const CACHE = 'tibia-bed-v1';
-const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.svg'];
+{
+  "name": "Tibia Bed Timer",
+  "short_name": "Bed Timer",
+  "description": "Timer de regeneração de mana dormindo na cama - Tibia Sorcerer",
+  "start_url": "/Tibia-bedmaker-time/index.html",
+  "scope": "/Tibia-bedmaker-time/",
+  "display": "standalone",
+  "background_color": "#0e0a04",
+  "theme_color": "#0e0a04",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/Tibia-bedmaker-time/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Tibia-bedmaker-time/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
-  );
-});
-
-// Listen for push messages from the page
-self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'NOTIFY') {
-    self.registration.showNotification('🛏️ Tibia Bed Timer', {
-      body: 'Seu personagem regenerou 120 de mana! Hora de acordar.',
-      icon: '/icon-192.svg',
-      badge: '/icon-192.svg',
-      tag: 'tibia-bed',
-      renotify: true,
-      vibrate: [300, 100, 300, 100, 600],
-      requireInteraction: true,
-      actions: [
-        { action: 'done', title: '✔ Já acordei' }
-      ]
-    });
-  }
-});
-
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  e.waitUntil(clients.openWindow('/'));
-});
