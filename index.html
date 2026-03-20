@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bed Timer">
+  <meta name="theme-color" content="#0e0a04">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.svg">
+  <title>Tibia Bed Timer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #d4943a;
+      --gold-light: #f0c060;
+      --gold-dark: #8a5a18;
+      --bg: #0e0a04;
+      --bg2: #1a1008;
+      --bg3: #241608;
+      --red: #c03020;
+      --red-light: #ff5040;
+      --green: #2a7a30;
+      --green-light: #50c060;
+      --text: #e8d090;
+      --text-dim: #806030;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: 'Crimson Text', Georgia, serif;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: calc(var(--safe-top) + 16px);
+      padding-bottom: calc(var(--safe-bottom) + 16px);
+      padding-left: 20px;
+      padding-right: 20px;
+      min-height: 100dvh;
+    }
+
+    /* Background texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(180,100,20,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(100,50,10,0.1) 0%, transparent 50%),
+        repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 2px,
+          rgba(180,100,20,0.015) 2px,
+          rgba(180,100,20,0.015) 4px
+        );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    /* HEADER */
+    .header {
+      text-align: center;
+      width: 100%;
+    }
+
+    .header-icon {
+      font-size: 32px;
+      line-height: 1;
+      margin-bottom: 4px;
+      filter: drop-shadow(0 0 12px rgba(212,148,58,0.6));
+    }
+
+    .header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--gold-light);
+      text-shadow: 0 0 20px rgba(212,148,58,0.5), 0 2px 4px rgba(0,0,0,0.8);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .header p {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-style: italic;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    /* DIVIDER */
+    .divider {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dark), transparent);
+    }
+    .divider span {
+      color: var(--gold-dark);
+      font-size: 12px;
+    }
+
+    /* INSTALL BANNER */
+    .install-banner {
+      width: 100%;
+      background: linear-gradient(135deg, #1a2a10, #0e1a08);
+      border: 1px solid #3a6020;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #80c060;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    .install-banner.show { display: flex; }
+    .install-banner strong { color: #a0e080; }
+
+    /* ALERT */
+    .alert {
+      width: 100%;
+      background: linear-gradient(135deg, #2a0808, #1a0404);
+      border: 2px solid var(--red);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      display: none;
+      animation: alertPulse 1.5s ease-in-out infinite;
+    }
+    .alert.show { display: block; }
+    .alert-title {
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: var(--red-light);
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    .alert-sub {
+      font-size: 13px;
+      color: #c08080;
+      font-style: italic;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% { border-color: var(--red); box-shadow: 0 0 10px rgba(192,48,32,0.3); }
+      50% { border-color: var(--red-light); box-shadow: 0 0 24px rgba(255,80,64,0.5); }
+    }
+
+    /* CLOCK FACE */
+    .clock-wrap {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      flex-shrink: 0;
+    }
+
+    .clock-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .clock-face {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .countdown {
+      font-family: 'Cinzel', serif;
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--gold-light);
+      text-shadow: 0 0 20px rgba(212,148,58,0.7);
+      letter-spacing: 2px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s;
+    }
+
+    .countdown.urgent {
+      color: var(--red-light);
+      text-shadow: 0 0 20px rgba(255,80,64,0.8);
+      animation: countPulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes countPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .clock-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      font-family: 'Cinzel', serif;
+    }
+
+    /* MANA BAR */
+    .mana-section {
+      width: 100%;
+    }
+    .mana-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .mana-label {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+    }
+    .mana-value {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #6090e0;
+      font-weight: 700;
+    }
+    .mana-track {
+      width: 100%;
+      height: 14px;
+      background: #0a0810;
+      border: 1px solid #304060;
+      border-radius: 7px;
+      overflow: hidden;
+      position: relative;
+    }
+    .mana-fill {
+      height: 100%;
+      border-radius: 7px;
+      background: linear-gradient(90deg, #2040a0, #4080e0, #60b0ff);
+      box-shadow: 0 0 10px rgba(80,140,240,0.5);
+      transition: width 1s linear;
+      position: relative;
+    }
+    .mana-fill::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      right: 4px;
+      height: 3px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+    }
+
+    /* STATS ROW */
+    .stats {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-box {
+      background: var(--bg3);
+      border: 1px solid #3a2808;
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-family: 'Cinzel', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gold-light);
+      line-height: 1;
+    }
+
+    .stat-lbl {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    /* BUTTONS */
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, #b06010, #6a3808);
+      color: #fff0c0;
+      border: 2px solid var(--gold);
+      box-shadow: 0 4px 20px rgba(180,100,20,0.4), inset 0 1px 0 rgba(255,220,100,0.2);
+    }
+
+    .btn-start:active { transform: scale(0.97); }
+
+    .btn-done {
+      background: linear-gradient(135deg, #1a5a20, #0e3010);
+      color: #a0f0a0;
+      border: 2px solid var(--green);
+      box-shadow: 0 4px 20px rgba(40,120,50,0.3);
+    }
+
+    .btn-done:active { transform: scale(0.97); }
+
+    .btn-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      padding: 12px;
+      border: 1px solid #3a2808;
+      border-radius: 10px;
+      background: var(--bg3);
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:active { transform: scale(0.97); }
+    .btn-secondary.danger { border-color: #602020; color: #c06060; }
+
+    .btn-primary:disabled, .btn-secondary:disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* HISTORY */
+    .history-section {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .history-title {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .history-list {
+      max-height: 90px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .history-list::-webkit-scrollbar { width: 3px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 2px; }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: var(--bg3);
+      border: 1px solid #2a1808;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .history-item .hi-cycle { color: var(--gold); font-family: 'Cinzel', serif; font-weight: 700; }
+    .history-item .hi-time { color: var(--text-dim); }
+    .history-item .hi-mana { color: #6090e0; font-size: 11px; }
+
+    .empty-history {
+      text-align: center;
+      color: var(--text-dim);
+      font-style: italic;
+      font-size: 13px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-icon">🛏️</div>
+    <h1>Bed Timer</h1>
+    <p>Sorcerer · 4 mana/min · 120 mana</p>
+  </div>
+
+  <div class="divider"><span>⚔</span></div>
+
+  <!-- Install banner for iOS -->
+  <div class="install-banner" id="installBanner">
+    <span>📲</span>
+    <div><strong>Instale o app!</strong> Toque em <strong>Compartilhar → Add to Home Screen</strong> para notificações em segundo plano.</div>
+  </div>
+
+  <!-- Alert -->
+  <div class="alert" id="alert">
+    <div class="alert-title">⚔ ACORDE O PERSONAGEM!</div>
+    <div class="alert-sub">120 mana regenerados — hora de agir!</div>
+  </div>
+
+  <!-- Clock -->
+  <div class="clock-wrap">
+    <svg class="clock-svg" viewBox="0 0 220 220">
+      <!-- Outer ring -->
+      <circle cx="110" cy="110" r="105" fill="none" stroke="#2a1808" stroke-width="4"/>
+      <!-- Track -->
+      <circle cx="110" cy="110" r="95" fill="none" stroke="#1a1008" stroke-width="12"/>
+      <!-- Progress arc -->
+      <circle cx="110" cy="110" r="95" fill="none" stroke="url(#arcGrad)" stroke-width="12"
+              stroke-linecap="round"
+              stroke-dasharray="597"
+              stroke-dashoffset="0"
+              transform="rotate(-90 110 110)"
+              id="progressArc"/>
+      <!-- Inner glow ring -->
+      <circle cx="110" cy="110" r="86" fill="none" stroke="rgba(212,148,58,0.08)" stroke-width="1"/>
+      <!-- Tick marks -->
+      <g id="ticks"></g>
+      <defs>
+        <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#8a5a18"/>
+          <stop offset="100%" stop-color="#f0c060"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="clock-face">
+      <div class="countdown" id="countdown">30:00</div>
+      <div class="clock-label" id="clockLabel">Aguardando</div>
+    </div>
+  </div>
+
+  <!-- Mana bar -->
+  <div class="mana-section">
+    <div class="mana-header">
+      <span class="mana-label">🔵 Mana Regenerada</span>
+      <span class="mana-value" id="manaVal">0 / 120</span>
+    </div>
+    <div class="mana-track">
+      <div class="mana-fill" id="manaFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-val" id="statCycles">0</div>
+      <div class="stat-lbl">Ciclos</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="statMana">0</div>
+      <div class="stat-lbl">Mana Total</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="statTime">0m</div>
+      <div class="stat-lbl">Dormindo</div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <button class="btn-primary btn-start" id="btnStart" onclick="startTimer()">▶ Deitar na Cama</button>
+  <button class="btn-primary btn-done" id="btnDone" onclick="confirmDone()" disabled style="display:none">✔ Já Acordei o Personagem</button>
+
+  <div class="btn-row">
+    <button class="btn-secondary" id="btnNotif" onclick="requestNotif()">🔔 Ativar Notificações</button>
+    <button class="btn-secondary danger" id="btnStop" onclick="stopTimer()" disabled>✖ Parar</button>
+  </div>
+
+  <div class="divider"><span>📜</span></div>
+
+  <div class="history-section">
+    <div class="history-title">Histórico de Ciclos</div>
+    <div class="history-list" id="historyList">
+      <div class="empty-history" id="emptyHistory">Nenhum ciclo completado ainda...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ---- State ----
+  const DURATION = 30 * 60;
+  const MANA_REGEN = 4; // per minute
+  let secondsLeft = DURATION;
+  let interval = null;
+  let running = false;
+  let alerting = false;
+  let cycles = 0;
+  let totalMana = 0;
+  let totalSleep = 0; // minutes
+  const CIRCUMFERENCE = 2 * Math.PI * 95; // ~597
+
+  // ---- iOS detection ----
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+
+  if (isIOS && !isStandalone) {
+    document.getElementById('installBanner').classList.add('show');
+  }
+
+  // ---- Draw ticks ----
+  (function drawTicks() {
+    const g = document.getElementById('ticks');
+    for (let i = 0; i < 30; i++) {
+      const angle = (i / 30) * 2 * Math.PI - Math.PI / 2;
+      const isMajor = i % 5 === 0;
+      const r1 = isMajor ? 78 : 80;
+      const r2 = isMajor ? 72 : 76;
+      const x1 = 110 + r1 * Math.cos(angle);
+      const y1 = 110 + r1 * Math.sin(angle);
+      const x2 = 110 + r2 * Math.cos(angle);
+      const y2 = 110 + r2 * Math.sin(angle);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('stroke', isMajor ? '#5a3a18' : '#2a1808');
+      line.setAttribute('stroke-width', isMajor ? '2' : '1');
+      g.appendChild(line);
+    }
+  })();
+
+  // ---- Update UI ----
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function updateDisplay() {
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    const el = document.getElementById('countdown');
+    el.textContent = `${pad(m)}:${pad(s)}`;
+
+    const urgent = secondsLeft <= 60 && running && secondsLeft > 0;
+    el.classList.toggle('urgent', urgent);
+
+    // Arc
+    const progress = secondsLeft / DURATION;
+    const offset = CIRCUMFERENCE * (1 - progress);
+    document.getElementById('progressArc').setAttribute('stroke-dashoffset', offset);
+
+    // Mana bar
+    const elapsed = DURATION - secondsLeft;
+    const manaRegen = Math.min(120, Math.floor((elapsed / 60) * MANA_REGEN));
+    const pct = (manaRegen / 120) * 100;
+    document.getElementById('manaFill').style.width = pct + '%';
+    document.getElementById('manaVal').textContent = `${manaRegen} / 120`;
+
+    // Time stat
+    document.getElementById('statTime').textContent = Math.floor((totalSleep + (DURATION - secondsLeft) / 60)) + 'm';
+  }
+
+  function startTimer() {
+    if (running) return;
+    running = true;
+    alerting = false;
+    secondsLeft = DURATION;
+
+    document.getElementById('alert').classList.remove('show');
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnDone').style.display = 'none';
+    document.getElementById('btnDone').disabled = true;
+    document.getElementById('btnStop').disabled = false;
+    document.getElementById('clockLabel').textContent = 'Dormindo 💤';
+    document.getElementById('progressArc').setAttribute('stroke', 'url(#arcGrad)');
+    updateDisplay();
+
+    interval = setInterval(() => {
+      secondsLeft--;
+      updateDisplay();
+      if (secondsLeft <= 0) {
+        clearInterval(interval);
+        running = false;
+        alerting = true;
+        triggerAlert();
+      }
+    }, 1000);
+  }
+
+  function triggerAlert() {
+    totalSleep += 30;
+    document.getElementById('clockLabel').textContent = '⚠️ Acorde!';
+    document.getElementById('alert').classList.add('show');
+    document.getElementById('btnDone').style.display = 'block';
+    document.getElementById('btnDone').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('countdown').classList.add('urgent');
+
+    // Change arc to red
+    document.getElementById('progressArc').setAttribute('stroke', '#c03020');
+
+    playAlertSound();
+    sendNotification();
+    triggerVibration();
+  }
+
+  function confirmDone() {
+    if (!alerting) return;
+    alerting = false;
+    cycles++;
+    totalMana += 120;
+
+    document.getElementById('statCycles').textContent = cycles;
+    document.getElementById('statMana').textContent = totalMana;
+
+    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    addHistory(cycles, now);
+
+    document.getElementById('alert').classList.remove('show');
+    document.getElementById('btnDone').style.display = 'none';
+    document.getElementById('btnDone').disabled = true;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('clockLabel').textContent = 'Pronto! ▶';
+    document.getElementById('countdown').classList.remove('urgent');
+
+    secondsLeft = DURATION;
+    updateDisplay();
+  }
+
+  function stopTimer() {
+    clearInterval(interval);
+    running = false;
+    alerting = false;
+    secondsLeft = DURATION;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnDone').style.display = 'none';
+    document.getElementById('btnDone').disabled = true;
+    document.getElementById('btnStop').disabled = true;
+    document.getElementById('alert').classList.remove('show');
+    document.getElementById('clockLabel').textContent = 'Parado';
+    document.getElementById('countdown').classList.remove('urgent');
+    updateDisplay();
+  }
+
+  function addHistory(cycle, time) {
+    const empty = document.getElementById('emptyHistory');
+    if (empty) empty.remove();
+
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `
+      <span class="hi-cycle">Ciclo ${cycle}</span>
+      <span class="hi-mana">+120 mana</span>
+      <span class="hi-time">${time}</span>
+    `;
+    document.getElementById('historyList').prepend(item);
+  }
+
+  // ---- Sound ----
+  function playAlertSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.4, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        osc.start(t);
+        osc.stop(t + 0.3);
+      });
+    } catch(e) {}
+  }
+
+  // ---- Vibration ----
+  function triggerVibration() {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([300, 100, 300, 100, 600]);
+    }
+  }
+
+  // ---- Notifications ----
+  async function requestNotif() {
+    if (!('Notification' in window)) {
+      alert('Notificações não suportadas neste navegador.');
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      document.getElementById('btnNotif').textContent = '🔔 Notificações Ativas';
+      document.getElementById('btnNotif').disabled = true;
+    } else {
+      alert('Permissão negada. Para iOS, instale o app na tela inicial primeiro.');
+    }
+  }
+
+  function sendNotification() {
+    if (Notification.permission === 'granted') {
+      new Notification('🛏️ Tibia Bed Timer', {
+        body: 'Seu personagem regenerou 120 de mana! Hora de acordar.',
+        icon: 'icon-192.svg',
+        badge: 'icon-192.svg',
+        tag: 'tibia-bed',
+        renotify: true,
+      });
+    }
+  }
+
+  // ---- Service Worker ----
+  let swReg = null;
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      swReg = reg;
+    }).catch(() => {});
+  }
+
+  function sendNotification() {
+    // Try via SW first (works in background on iOS 16.4+ standalone)
+    if (swReg && Notification.permission === 'granted') {
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'NOTIFY' });
+        return;
+      }
+      swReg.showNotification('🛏️ Tibia Bed Timer', {
+        body: 'Seu personagem regenerou 120 de mana! Hora de acordar.',
+        icon: 'icon-192.svg',
+        tag: 'tibia-bed',
+        renotify: true,
+        vibrate: [300, 100, 300, 100, 600],
+        requireInteraction: true,
+      });
+      return;
+    }
+    // Fallback: direct notification
+    if (Notification.permission === 'granted') {
+      new Notification('🛏️ Tibia Bed Timer', {
+        body: 'Seu personagem regenerou 120 de mana! Hora de acordar.',
+        tag: 'tibia-bed',
+      });
+    }
+  }
+
+  // Auto-request on load if standalone
+  if (isStandalone && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  if (Notification.permission === 'granted') {
+    document.getElementById('btnNotif').textContent = '🔔 Notificações Ativas';
+    document.getElementById('btnNotif').disabled = true;
+  }
+
+  // Init display
+  updateDisplay();
+</script>
+</body>
+</html>
